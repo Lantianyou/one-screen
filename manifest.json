@@ -1,0 +1,9 @@
+{
+  "id": "one-screen",
+  "name": "One Screen",
+  "version": "0.1.1",
+  "minAppVersion": "1.7.2",
+  "description": "Preview a Markdown essay in a single phone-sized image and export it as PNG.",
+  "author": "lantianyou",
+  "isDesktopOnly": true
+}

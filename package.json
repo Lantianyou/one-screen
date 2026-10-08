@@ -1,0 +1,42 @@
+{
+  "name": "one-screen",
+  "version": "0.1.1",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lantianyou/one-screen.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vp build --watch",
+    "build": "tsc -b && vp build",
+    "check": "vp check",
+    "test": "vp test run",
+    "verify:obsidian": "node scripts/verify-obsidian.mjs",
+    "install:local": "node scripts/install.mjs"
+  },
+  "dependencies": {
+    "modern-screenshot": "^4.7.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "obsidian": "^1.13.1",
+    "typescript": "~6.0.2",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.10.1",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.10.1"
+}
