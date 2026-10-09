@@ -56,6 +56,7 @@ class OneScreenView extends ItemView {
         };
       },
       savePng: (blob, title) => this.plugin.savePng(blob, title),
+      copyPng: (blob) => this.plugin.copyPng(blob),
       notify: (message) => {
         new Notice(message);
       },
@@ -133,9 +134,22 @@ export default class OneScreenPlugin extends Plugin {
     );
     this.app.workspace.onLayoutReady(() => {
       if (this.closed) return;
-      const file = this.app.workspace.getActiveFile();
-      if (file?.extension === "md") void this.refreshDocument(file);
+      const view = this.getSourceView();
+      if (view?.file) void this.refreshDocument(view.file, view.editor);
     });
+  }
+
+  private getSourceView(): MarkdownView | null {
+    const active = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (active?.file) return active;
+    const recent = this.app.workspace.getMostRecentLeaf()?.view;
+    if (recent instanceof MarkdownView && recent.file) return recent;
+    // The preview can have focus when the plugin is reloaded or reopened.
+    for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.file && view.containerEl.isShown()) return view;
+    }
+    return null;
   }
 
   private async refreshDocument(file: TFile, editor?: Editor) {
@@ -164,8 +178,8 @@ export default class OneScreenPlugin extends Plugin {
       await leaf.setViewState({ type: VIEW_TYPE, active: true });
     }
     await this.app.workspace.revealLeaf(leaf);
-    const markdownView = this.app.workspace.getMostRecentLeaf()?.view;
-    if (markdownView instanceof MarkdownView && markdownView.file) {
+    const markdownView = this.getSourceView();
+    if (markdownView?.file) {
       await this.refreshDocument(markdownView.file, markdownView.editor);
     }
   }
@@ -188,6 +202,28 @@ export default class OneScreenPlugin extends Plugin {
     }
     await this.app.vault.createBinary(path, await blob.arrayBuffer());
     return path;
+  }
+
+  async copyPng(blob: Blob): Promise<void> {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard?.write ||
+      typeof ClipboardItem === "undefined"
+    ) {
+      throw new Error("当前环境不支持图片复制到剪贴板。");
+    }
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type || "image/png"]: blob })]);
+    } catch (error) {
+      if (
+        typeof DOMException !== "undefined" &&
+        error instanceof DOMException &&
+        error.name === "NotAllowedError"
+      ) {
+        throw new Error("无法访问系统剪贴板，请允许 Obsidian 使用剪贴板后重试。");
+      }
+      throw new Error("复制图片到剪贴板失败，请重试。");
+    }
   }
 
   onunload() {

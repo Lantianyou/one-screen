@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PreviewBridge } from "./bridge";
-import { captureCard, measureCard } from "./export";
-import { CARD, fits, stripFrontmatter, type FitMetrics } from "./model";
+import { captureCard, waitForAssets } from "./export";
+import { compileCard, type LayoutReport } from "./layout";
+import { CARD, DENSITY_LABELS, fits, stripFrontmatter, type EssayDocument } from "./model";
 
 export function Preview({ bridge }: { bridge: PreviewBridge }) {
   const essay = useSyncExternalStore(bridge.store.subscribe, bridge.store.getSnapshot);
@@ -9,35 +10,26 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [metrics, setMetrics] = useState<FitMetrics | null>(null);
+  const [renderedEssay, setRenderedEssay] = useState<EssayDocument | null>(null);
+  const [report, setReport] = useState<LayoutReport | null>(null);
   const [renderState, setRenderState] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [scale, setScale] = useState(1);
+  const [actualSize, setActualSize] = useState(false);
 
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
     const updateScale = () => {
-      setScale(
-        Math.min(
-          1,
-          Math.max(
-            0.1,
-            Math.min(
-              (stage.clientWidth - 40) / CARD.width,
-              (stage.clientHeight - 40) / CARD.height,
-            ),
-          ),
-        ),
-      );
+      setScale(actualSize ? 1 : Math.min(1, Math.max(0.1, (stage.clientWidth - 32) / CARD.width)));
     };
     updateScale();
     const observer = new ResizeObserver(updateScale);
     observer.observe(stage);
     return () => observer.disconnect();
-  }, [hasEssay]);
+  }, [hasEssay, actualSize]);
 
   useEffect(() => {
     const target = bodyRef.current;
@@ -45,13 +37,14 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
     let cancelled = false;
     let cleanup: (() => void) | undefined;
     setRenderState("loading");
-    setMetrics(null);
+    setReport(null);
+    setError("");
     setMessage("");
     const staging = target.ownerDocument.createElement("div");
     staging.className = "os-markdown markdown-rendered";
     void bridge
       .renderMarkdown(stripFrontmatter(essay.markdown), staging, essay.path)
-      .then((unload) => {
+      .then(async (unload) => {
         if (cancelled) {
           unload();
           return;
@@ -67,7 +60,11 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
         staging.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
           input.disabled = true;
         });
-        setRenderState("ready");
+        if (cardRef.current) await waitForAssets(cardRef.current);
+        if (!cancelled) {
+          setRenderedEssay(essay);
+          setRenderState("ready");
+        }
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
@@ -89,7 +86,13 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
     const measure = () => {
       clearTimeout(frame);
       frame = setTimeout(() => {
-        if (!cancelled) setMetrics(measureCard(card));
+        if (cancelled) return;
+        try {
+          setReport(compileCard(card));
+        } catch (reason) {
+          setError(reason instanceof Error ? reason.message : "排版检查失败。");
+          setRenderState("error");
+        }
       }, 16);
     };
     const resize = new ResizeObserver(measure);
@@ -114,7 +117,8 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
     };
   }, [renderState, essay?.markdown, essay?.path]);
 
-  const overflowing = metrics ? !fits(metrics) : false;
+  const metrics = report?.metrics ?? null;
+  const overflowing = report ? !fits(report.metrics) || report.errors.length > 0 : false;
   const verticalOverflow = metrics !== null && metrics.overflow > 1;
   const horizontalOverflow = metrics !== null && metrics.horizontalOverflow > 1;
   const exportReady =
@@ -122,6 +126,7 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
     metrics !== null &&
     !overflowing &&
     !busy &&
+    renderedEssay === essay &&
     !!essay?.markdown.trim();
 
   async function exportImage() {
@@ -132,8 +137,15 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
     try {
       const blob = await captureCard(card);
       const path = await bridge.savePng(blob, essay.title);
-      setMessage("PNG 已保存");
-      bridge.notify("One Screen：图片已保存到 " + path);
+      try {
+        await bridge.copyPng(blob);
+        setMessage("PNG 已保存并复制到剪贴板");
+        bridge.notify("One Screen：图片已保存到 " + path + "，并已复制到剪贴板");
+      } catch (reason) {
+        const copyError = reason instanceof Error ? reason.message : "复制到剪贴板失败。";
+        setMessage("PNG 已保存，但" + copyError);
+        bridge.notify("One Screen：图片已保存到 " + path + "，但" + copyError);
+      }
     } catch (reason) {
       const text = reason instanceof Error ? reason.message : "导出失败，请重试。";
       setMessage(text);
@@ -151,7 +163,7 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
         : overflowing
           ? verticalOverflow
             ? "超出约 " + metrics?.extraLines + " 行"
-            : "宽度超出 " + Math.ceil(metrics?.horizontalOverflow ?? 0) + " px"
+            : (report?.errors[0] ?? "排版需要调整")
           : metrics
             ? "一屏内"
             : "正在测量…";
@@ -165,6 +177,13 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
         .filter(Boolean)
         .join(" · ")
     : "";
+  const details = [
+    overflowDetails,
+    verticalOverflow ? "已使用紧凑排版，请精简文字后导出。正文保持 17 px，不会裁切。" : "",
+    ...(report?.notes ?? []),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="os-workspace">
@@ -194,12 +213,24 @@ export function Preview({ bridge }: { bridge: PreviewBridge }) {
               <strong>{status}</strong>
               {metrics && renderState === "ready" ? <span>已用 {metrics.percent}%</span> : null}
             </div>
-            {overflowDetails ? <p className="os-fit-details">{overflowDetails}</p> : null}
+            {details ? <p className="os-fit-details">{details}</p> : null}
             {metrics && renderState === "ready" ? (
               <div className="os-fit-track" aria-hidden="true">
                 <div style={{ width: Math.min(100, metrics.percent) + "%" }} />
               </div>
             ) : null}
+          </div>
+          <div className="os-preview-tools">
+            <span>
+              {CARD.device} · {report ? DENSITY_LABELS[report.density] : "17 px 正文"}
+            </span>
+            <button
+              type="button"
+              aria-pressed={actualSize}
+              onClick={() => setActualSize((current) => !current)}
+            >
+              {actualSize ? "适应宽度" : "实际大小"}
+            </button>
           </div>
           <div className="os-stage" ref={stageRef}>
             <div

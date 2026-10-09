@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { assessFit, fits, stripFrontmatter, PreviewStore } from "./model";
+import { CARD, assessFit, fits, stripFrontmatter, PreviewStore } from "./model";
 
 describe("single-screen fit", () => {
   it("accepts content exactly at the page boundary", () => {
@@ -12,6 +12,13 @@ describe("single-screen fit", () => {
   });
   it("blocks wide content even when the height fits", () => {
     expect(fits(assessFit(400, 736, 500, 336))).toBe(false);
+  });
+  it("counts excess lines using the applied density", () => {
+    expect(assessFit(800, 736, 336, 336, 17 * 1.55).extraLines).toBe(3);
+    expect(assessFit(764, 736, 336, 336, 17 * 1.55).extraLines).toBe(2);
+  });
+  it("exports an iPhone 18 Pro screen at its native pixel dimensions", () => {
+    expect([CARD.width * CARD.exportScale, CARD.height * CARD.exportScale]).toEqual([1206, 2622]);
   });
 });
 

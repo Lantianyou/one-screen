@@ -1,12 +1,22 @@
 export const CARD = {
-  // iPhone 15 Pro: 1179 × 2556 physical pixels, rendered at 3×.
-  width: 393,
-  height: 852,
+  // iPhone 18 Pro: 1206 × 2622 physical pixels, rendered at 3×.
+  device: "iPhone 18 Pro",
+  width: 402,
+  height: 874,
   fontSize: 17,
-  lineHeight: 1.4,
+  lineHeight: 1.45,
   exportScale: 3,
   exportFolder: "attachments/one-screen",
 } as const;
+
+// Adapt spacing only. The body stays at a readable 17 logical pixels.
+export const DENSITIES = ["comfortable", "balanced", "compact"] as const;
+export type Density = (typeof DENSITIES)[number];
+export const DENSITY_LABELS: Record<Density, string> = {
+  comfortable: "舒展排版",
+  balanced: "适中排版",
+  compact: "紧凑排版",
+};
 
 export function stripFrontmatter(markdown: string): string {
   return markdown.replace(/^\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/, "");
@@ -26,6 +36,7 @@ export function assessFit(
   available: number,
   contentWidth: number,
   availableWidth: number,
+  lineHeight: number = CARD.fontSize * CARD.lineHeight,
 ): FitMetrics {
   const overflow = Math.max(0, used - available);
   return {
@@ -34,7 +45,7 @@ export function assessFit(
     overflow,
     horizontalOverflow: Math.max(0, contentWidth - availableWidth),
     percent: Math.round((used / Math.max(1, available)) * 100),
-    extraLines: Math.ceil(overflow / (CARD.fontSize * CARD.lineHeight)),
+    extraLines: Math.ceil(overflow / lineHeight),
   };
 }
 

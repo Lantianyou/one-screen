@@ -8,5 +8,6 @@ export interface PreviewBridge {
     sourcePath: string,
   ) => Promise<() => void>;
   savePng: (blob: Blob, title: string) => Promise<string>;
+  copyPng: (blob: Blob) => Promise<void>;
   notify: (message: string) => void;
 }

@@ -108,36 +108,57 @@
 }
 .os-stage {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 0;
-  padding: 20px;
-  overflow: hidden;
+  padding: 16px;
+  overflow: auto;
   background: var(--background-secondary);
 }
 .os-card-shell {
-  flex-shrink: 0;
+  margin: 0 auto;
 }
 .os-card {
+  /* Editorial single-screen rhythm: dense enough for an essay, with 17px type kept intact. */
+  --os-leading: 1.45;
+  --os-paragraph-gap: 9px;
+  --os-heading-before: 21px;
+  --os-heading-after: 6px;
+  --os-title-after: 15px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  padding: 20px 27px 24px;
+  padding: 24px 22px 26px;
   transform-origin: top left;
   overflow: hidden;
   border: none;
   border-radius: 0;
   background: #fff;
-  color: #353535;
+  color: #25282e;
   font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 17px;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: var(--os-leading);
   text-align: left;
   letter-spacing: 0;
   box-shadow: 0 2px 12px #00000012;
   isolation: isolate;
+}
+.os-card[data-density="balanced"] {
+  --os-leading: 1.4;
+  --os-paragraph-gap: 8px;
+  --os-heading-before: 18px;
+  --os-heading-after: 5px;
+  --os-title-after: 13px;
+  padding-top: 22px;
+  padding-bottom: 24px;
+}
+.os-card[data-density="compact"] {
+  --os-leading: 1.34;
+  --os-paragraph-gap: 7px;
+  --os-heading-before: 15px;
+  --os-heading-after: 4px;
+  --os-title-after: 11px;
+  padding-top: 20px;
+  padding-bottom: 22px;
 }
 .os-body-region {
   flex: 1 1 0;
@@ -153,12 +174,15 @@
   font-family: inherit;
   font-size: 17px;
   font-weight: 400;
-  line-height: 1.4;
-  color: #353535;
-  overflow-wrap: anywhere;
+  line-height: var(--os-leading);
+  color: inherit;
+  overflow-wrap: break-word;
   word-break: normal;
+  line-break: strict;
+  hyphens: manual;
 }
-.os-card .os-markdown > :first-child {
+.os-card .os-markdown > :first-child,
+.os-card .os-markdown > :first-child > :first-child {
   margin-top: 0;
 }
 .os-card .os-markdown > :last-child {
@@ -167,30 +191,43 @@
 .os-card .os-markdown p {
   font: inherit;
   color: inherit;
-  margin: 0 0 0.85em;
+  margin: 0 0 var(--os-paragraph-gap);
   padding: 0;
+  text-wrap: pretty;
+  orphans: 2;
+  widows: 2;
 }
 .os-card .os-markdown :is(h1, h2, h3, h4, h5, h6) {
   font-family: inherit;
-  font-weight: 500;
-  color: #353535;
-  line-height: 1.25;
+  font-weight: 600;
+  color: inherit;
+  line-height: 1.3;
   padding: 0;
   letter-spacing: 0;
   border: 0;
-  margin: 0.95em 0 0.8em;
+  margin: var(--os-heading-before) 0 var(--os-heading-after);
+  text-wrap: balance;
 }
 .os-card .os-markdown h1 {
-  font-size: 21px;
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.25;
+  margin-bottom: var(--os-title-after);
 }
 .os-card .os-markdown h2 {
-  font-size: 19px;
+  font-size: 23px;
 }
-.os-card .os-markdown :is(h3, h4, h5, h6) {
+.os-card .os-markdown h3 {
+  font-size: 20px;
+}
+.os-card .os-markdown h4 {
+  font-size: 18px;
+}
+.os-card .os-markdown :is(h5, h6) {
   font-size: 17px;
 }
 .os-card .os-markdown :is(strong, b) {
-  color: #353535;
+  color: inherit;
   font-weight: 600;
 }
 .os-card .os-markdown em {
@@ -198,25 +235,31 @@
 }
 .os-card .os-markdown blockquote {
   font: inherit;
-  margin: 0.85em 0;
+  margin: var(--os-paragraph-gap) 0;
   padding: 0 0 0 0.85em;
   border-left: 2px solid #c8c8c8;
   background: transparent;
   border-radius: 0;
-  color: #666;
+  color: #525760;
 }
 .os-card .os-markdown blockquote p {
-  margin: 0;
+  margin-bottom: 0.6em;
+}
+.os-card .os-markdown blockquote > :last-child {
+  margin-bottom: 0;
 }
 .os-card .os-markdown :is(ul, ol) {
-  margin: 0 0 0.85em;
-  padding: 0 0 0 1.2em;
+  margin: 0 0 var(--os-paragraph-gap);
+  padding: 0 0 0 1.4em;
 }
 .os-card .os-markdown li {
   margin: 0.2em 0;
 }
 .os-card .os-markdown li > p {
   margin: 0;
+}
+.os-card .os-markdown li > :is(ul, ol) {
+  margin: 0.25em 0;
 }
 .os-card .os-markdown a {
   color: inherit;
@@ -235,19 +278,19 @@
   background: #f5f5f5;
   border: none;
   border-radius: 3px;
-  margin: 0.85em 0;
+  margin: var(--os-paragraph-gap) 0;
   padding: 0.6em;
-  font-size: 0.75em;
-  line-height: 1.4;
-  color: #353535;
+  font-size: 15px;
+  line-height: 1.55;
+  color: inherit;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   overflow: visible;
 }
 .os-card .os-markdown code {
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.82em;
-  color: #353535;
+  font-size: 15px;
+  color: inherit;
   background: #f5f5f5;
   border-radius: 2px;
   padding: 0.1em 0.2em;
@@ -257,6 +300,9 @@
   color: inherit;
   background: transparent;
   padding: 0;
+  white-space: inherit;
+  overflow-wrap: inherit;
+  overflow: visible;
 }
 .os-card .os-markdown .copy-code-button {
   display: none;
@@ -275,16 +321,19 @@
 }
 .os-card .os-markdown table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.8em;
-  line-height: 1.4;
-  margin: 0.85em 0;
+  font-size: 15px;
+  line-height: 1.55;
+  margin: var(--os-paragraph-gap) 0;
 }
 .os-card .os-markdown :is(th, td) {
-  color: #353535;
+  color: inherit;
   border: 1px solid #ddd;
   background: transparent;
   padding: 0.3em 0.5em;
+  overflow-wrap: anywhere;
+  vertical-align: top;
 }
 .os-card .os-markdown th {
   font-weight: 600;
@@ -294,8 +343,95 @@
   color: inherit;
   font-size: 1em;
 }
+.os-card .os-markdown :is(.os-nowrap, .os-keep-tail) {
+  white-space: nowrap;
+}
+.os-card .os-markdown .table-wrapper {
+  max-width: 100%;
+  overflow: visible;
+}
+.os-card .os-markdown :is(.markdown-embed-content, .callout-content) {
+  max-height: none;
+  overflow: visible;
+}
+.os-card .os-markdown .os-table-stack {
+  font-size: 15px;
+  line-height: 1.55;
+  margin-bottom: var(--os-paragraph-gap);
+}
+.os-card .os-markdown .os-table-stack dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 6px 12px;
+  padding: 12px 0;
+  margin: 0;
+  border-top: 1px solid #ddd;
+}
+.os-card .os-markdown .os-table-stack :is(dt, dd) {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.os-card .os-markdown .os-table-stack dt {
+  font-weight: 600;
+}
+.os-card .os-markdown .footnotes {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #525760;
+  margin-top: 22px;
+  padding-top: 12px;
+  border-top: 1px solid #ddd;
+}
+.os-card .os-markdown .footnotes hr {
+  display: none;
+}
+.os-card .os-markdown :is(.footnote-ref, sup, sub) {
+  font-size: 12px;
+  line-height: 0;
+}
+.os-card .os-markdown .footnote-backref {
+  display: none;
+}
+.os-card .os-markdown .callout {
+  color: inherit;
+  background: #f5f5f3;
+  border: 0;
+  border-left: 2px solid #c8c8c8;
+  border-radius: 0;
+  padding: 12px;
+  margin: var(--os-paragraph-gap) 0;
+}
+.os-card .os-markdown :is(.callout-title, .callout-content) {
+  font: inherit;
+  color: inherit;
+}
+.os-card .os-markdown .callout-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
 .os-card-overflow .os-body-region {
   box-shadow: inset 0 -2px 0 #b74432;
+}
+.os-preview-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+}
+.os-preview-tools button {
+  flex-shrink: 0;
+  font: inherit;
+  min-height: 24px;
+  cursor: pointer;
+}
+.os-preview-tools button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }
 .os-status {
   display: flex;

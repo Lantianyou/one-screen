@@ -1,14 +1,10 @@
 import { domToBlob } from "modern-screenshot";
-import { CARD, assessFit, fits, type FitMetrics } from "./model";
-
-export function measureCard(card: HTMLElement): FitMetrics {
-  const region = card.querySelector<HTMLElement>(".os-body-region");
-  const body = card.querySelector<HTMLElement>(".os-markdown");
-  if (!region || !body) throw new Error("正文还在渲染，请稍候。");
-  return assessFit(body.scrollHeight, region.clientHeight, body.scrollWidth, region.clientWidth);
-}
+import { CARD } from "./model";
+import { validateCard } from "./layout";
 
 async function waitForImage(image: HTMLImageElement): Promise<void> {
+  // Lazy images must also load in an offscreen export host.
+  image.loading = "eager";
   if (!image.complete) {
     await new Promise<void>((resolve, reject) => {
       const cleanup = () => {
@@ -36,6 +32,11 @@ async function waitForImage(image: HTMLImageElement): Promise<void> {
   await image.decode();
 }
 
+export async function waitForAssets(card: HTMLElement): Promise<void> {
+  await card.ownerDocument.fonts.ready;
+  await Promise.all(Array.from(card.querySelectorAll("img"), waitForImage));
+}
+
 export async function captureCard(card: HTMLElement): Promise<Blob> {
   const document = card.ownerDocument;
   const clone = card.cloneNode(true) as HTMLElement;
@@ -58,10 +59,9 @@ export async function captureCard(card: HTMLElement): Promise<Blob> {
       image.height = canvas.height;
       canvas.replaceWith(image);
     });
-    await document.fonts.ready;
-    await Promise.all(Array.from(clone.querySelectorAll("img"), waitForImage));
-    const metrics = measureCard(clone);
-    if (!fits(metrics)) throw new Error("正文超出卡片，请缩短文字或调整排版后再导出。");
+    await waitForAssets(clone);
+    const errors = validateCard(clone);
+    if (errors.length) throw new Error(errors.join("；") + "。正文不会裁切或缩小。");
     const blob = await domToBlob(clone, {
       width: CARD.width,
       height: CARD.height,
